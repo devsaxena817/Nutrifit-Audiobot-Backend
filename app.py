@@ -24,40 +24,10 @@ MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "25"))
 
 genai.configure(api_key=API_KEY)
 
-PREFERRED_MODELS = [
-    "models/gemini-2.5-flash",
-    "models/gemini-2.0-flash",
-    "models/gemini-1.5-flash",
-]
+DEFAULT_GEMINI_MODEL = "models/gemini-2.5-flash"
+MODEL_NAME = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL
 
 
-def list_generate_content_models():
-    """
-    Return model names that support generateContent for this API key.
-    """
-    models = []
-    for model_info in genai.list_models():
-        methods = getattr(model_info, "supported_generation_methods", []) or []
-        if "generateContent" in methods:
-            models.append(model_info.name)
-    return sorted(models)
-
-
-def choose_model_name(available_models: list[str]) -> str:
-    """
-    Pick the best available model from a preferred order.
-    """
-    available_set = set(available_models)
-    for preferred in PREFERRED_MODELS:
-        if preferred in available_set:
-            return preferred
-    if available_models:
-        return available_models[0]
-    return PREFERRED_MODELS[-1]
-
-
-AVAILABLE_MODELS = []
-MODEL_NAME = os.getenv("GEMINI_MODEL", PREFERRED_MODELS[-1])
 model = genai.GenerativeModel(model_name=MODEL_NAME)
 print(f"Selected Gemini model: {MODEL_NAME}")
 
@@ -339,23 +309,11 @@ def health():
 
 @app.route("/models", methods=["GET"])
 def models_endpoint():
-    try:
-        available_models = list_generate_content_models()
-        selected_model = choose_model_name(available_models)
-        return jsonify(
-            {
-                "model_name": selected_model,
-                "available_models": available_models,
-            }
-        )
-    except Exception as exc:
-        return jsonify(
-            {
-                "error": "Could not list models",
-                "details": str(exc),
-                "model_name": MODEL_NAME,
-            }
-        ), 502
+    return jsonify(
+        {
+            "model_name": MODEL_NAME,
+        }
+    )
 
 
 @app.route("/analyze", methods=["POST"])
